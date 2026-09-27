@@ -24,6 +24,15 @@ The version is defined in [`blitztext/__init__.py`](blitztext/__init__.py).
   [docs/wayland-hotkeys.md](../docs/wayland-hotkeys.md).
   (`control.py`, wired into `Daemon.start_input`/`stop_input`.)
 
+### Fixed
+- **Duplicate hotkeys no longer silently drop a preset.** `_build_mapping()`
+  collected the workflow hotkeys into a plain `dict`, so two presets sharing a
+  combination kept only the last one and the other became unreachable while
+  still showing its hotkey in the panel and tray. The collision is now logged as
+  a `WARNING` naming both presets, and the bundled `Transcribe` preset ships with
+  its own combination (`<ctrl>+<alt>+d`) instead of none, so it no longer
+  collides with `Nicer email` (`<ctrl>+<alt>+e`).
+
 ## [2.03.54] - 2026-06-23
 
 ### Changed

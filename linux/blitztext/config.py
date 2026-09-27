@@ -788,7 +788,7 @@ temperature = 0.3
 name = "Transcribe"
 icon = "⚡"
 description = "Speak, get plain text."
-hotkey = ""
+hotkey = "<ctrl>+<alt>+d"
 mode = "transcribe"
 
 # [[workflow]]

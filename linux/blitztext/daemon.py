@@ -881,8 +881,14 @@ class Daemon:
     def _build_mapping(self) -> dict:
         """hotkey -> callback, skipping empty hotkeys, plus the routing hotkey."""
         mapping: dict = {}
+        owner: dict = {}
         for wf in self.cfg.workflows:
             if wf.hotkey:
+                if wf.hotkey in owner:
+                    log(f"Hotkey {wf.hotkey} is bound twice — '{owner[wf.hotkey]}' and "
+                        f"'{wf.name}'. Only '{wf.name}' is registered; give "
+                        f"'{owner[wf.hotkey]}' a different combination.", level="WARNING")
+                owner[wf.hotkey] = wf.name
                 mapping[wf.hotkey] = (lambda wf=wf: self.toggle(wf))
         if self.cfg.routing_enabled and self.cfg.routing_hotkey:
             mapping[self.cfg.routing_hotkey] = (lambda: self.toggle(self._route_workflow))
