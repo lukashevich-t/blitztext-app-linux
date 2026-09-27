@@ -1169,8 +1169,13 @@ class SettingsDialog:
         return entry
 
     def _key_field_lb(self, lb: Gtk.ListBox, label: str, value: str,
-                      placeholder: str = "", width: int = 130) -> Gtk.Entry:
-        """_key_field variant for use inside a card ListBox."""
+                      placeholder: str = "", width: int = 130,
+                      rows: list | None = None) -> Gtk.Entry:
+        """_key_field variant for use inside a card ListBox.
+
+        Pass `rows` to collect the whole row widgets, so a caller can dim or
+        disable the label, entry and "Set" button together.
+        """
         box = Gtk.Box(spacing=10)
         box.set_margin_top(6); box.set_margin_bottom(6)
         box.set_margin_start(12); box.set_margin_end(8)
@@ -1182,8 +1187,10 @@ class SettingsDialog:
         box.pack_start(entry, True, True, 0)
         btn = Gtk.Button(label="Set")
         btn.connect("clicked", lambda _b, e=entry: self._bind_key(e))
-        box.pack_start(btn, False, False, 0)
+        box.pack_end(btn, False, False, 0)
         _lb_add(lb, box)
+        if rows is not None:
+            rows.append(box)
         return entry
 
     def _show_emoji_picker(self, anchor: Gtk.Widget, entry: Gtk.Entry) -> None:
@@ -2006,6 +2013,32 @@ class SettingsDialog:
         page.pack_start(row, False, False, 0)
         return entry
 
+    def _sync_input_mode(self) -> None:
+        """Dim the modifier keys while 'hotkeys' mode makes them dead config.
+
+        In 'hotkeys' mode the daemon only reads the per-preset hotkeys, the
+        routing hotkey and the talk hotkey — key_start/stop/send/cancel and
+        push_to_talk are never consulted (daemon.start_input only builds a
+        ModifierScheme for 'modifiers').
+        """
+        combo = getattr(self, "in_mode", None)
+        rows = getattr(self, "_in_key_rows", None)
+        hint = getattr(self, "_in_mode_hint", None)
+        if combo is None or not rows or not hint:
+            return
+        inactive = (combo.get_active_text() or "") == "hotkeys"
+        for row in rows:
+            row.set_sensitive(not inactive)
+        ptt = getattr(self, "in_ptt", None)
+        if ptt is not None and ptt.get_parent() is not None:
+            ptt.get_parent().set_sensitive(not inactive)
+        box, text = hint
+        box.set_visible(inactive)
+        text.set_text("Push-to-talk and these four keys are unused in ’hotkeys’ mode. "
+                      "Dictation is started by a preset’s own Hotkey, by the voice-routing "
+                      "hotkey, or from the tray menu."
+                      if inactive else "")
+
     def _bind_key(self, entry: Gtk.Entry) -> None:
         self._bind_entry = entry
         self._bind_pressed = []
@@ -2047,10 +2080,30 @@ class SettingsDialog:
         _switch_row(mode_card, "Push-to-talk", self.in_ptt, width=LW,
                     description="Hold the Start key to record; release to stop. "
                                 "Off = the key toggles recording on/off.")
-        self.in_start  = self._key_field_lb(mode_card, "Start",              self.cfg.key_start,  width=LW)
-        self.in_stop   = self._key_field_lb(mode_card, "Stop + paste",       self.cfg.key_stop,   width=LW)
-        self.in_send   = self._key_field_lb(mode_card, "Stop + paste + Enter", self.cfg.key_send, width=LW)
-        self.in_cancel = self._key_field_lb(mode_card, "Cancel",             self.cfg.key_cancel, width=LW)
+
+        # In 'hotkeys' mode the daemon never reads key_start/stop/send/cancel —
+        # only the per-preset hotkeys, the routing hotkey and the talk hotkey.
+        # Dim the four fields and say so, instead of leaving dead settings that
+        # look active.
+        self._in_key_rows: list = []
+        self.in_start  = self._key_field_lb(mode_card, "Start",              self.cfg.key_start,  width=LW, rows=self._in_key_rows)
+        self.in_stop   = self._key_field_lb(mode_card, "Stop + paste",       self.cfg.key_stop,   width=LW, rows=self._in_key_rows)
+        self.in_send   = self._key_field_lb(mode_card, "Stop + paste + Enter", self.cfg.key_send, width=LW, rows=self._in_key_rows)
+        self.in_cancel = self._key_field_lb(mode_card, "Cancel",             self.cfg.key_cancel, width=LW, rows=self._in_key_rows)
+
+        hint = Gtk.Box(spacing=10)
+        hint.set_margin_top(2); hint.set_margin_bottom(6)
+        hint.set_margin_start(12); hint.set_margin_end(8)
+        h_lbl = Gtk.Label(label="", xalign=0.0); h_lbl.set_size_request(LW, -1)
+        hint.pack_start(h_lbl, False, False, 0)
+        hint_text = Gtk.Label(label="", xalign=0.0)
+        hint_text.set_line_wrap(True); hint_text.set_max_width_chars(50)
+        hint_text.get_style_context().add_class("dim-label")
+        hint.pack_start(hint_text, True, True, 0)
+        _lb_add(mode_card, hint)
+        self._in_mode_hint = (hint, hint_text)
+        self._sync_input_mode()
+        self.in_mode.connect("changed", lambda _c: self._sync_input_mode())
 
         # ── Quality gate card ─────────────────────────────────────────────────
         q_card = _card_section(page, "Quality gate", icon="security-high-symbolic")

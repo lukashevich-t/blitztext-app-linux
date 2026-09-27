@@ -33,6 +33,15 @@ The version is defined in [`blitztext/__init__.py`](blitztext/__init__.py).
   its own combination (`<ctrl>+<alt>+d`) instead of none, so it no longer
   collides with `Nicer email` (`<ctrl>+<alt>+e`).
 
+### Changed
+- **Settings → Keyboard now says that the modifier keys are inactive in
+  `hotkeys` mode.** `input.mode = "hotkeys"` only registers per-preset hotkeys,
+  the voice-routing hotkey and the talk hotkey; `key_start`/`key_stop`/
+  `key_send`/`key_cancel` and `push_to_talk` are never read
+  (`Daemon.start_input` only builds a `ModifierScheme` for `modifiers`). The four
+  key fields and Push-to-talk are now dimmed with an explanatory note while
+  `hotkeys` is selected, instead of looking like live settings.
+
 ## [2.03.54] - 2026-06-23
 
 ### Changed
