@@ -9,6 +9,21 @@ The version is defined in [`blitztext/__init__.py`](blitztext/__init__.py).
 
 ## [Unreleased]
 
+### Added
+- **Local control socket, so dictation can be triggered on Wayland.** Global
+  hotkeys are captured with `pynput`, which on Linux uses the X11 `RECORD`
+  extension; under a Wayland compositor that extension delivers no key events,
+  so every hotkey is silently dead while the app still reports `Ready`. The
+  running instance now listens on a per-user unix socket
+  (`$XDG_RUNTIME_DIR/blitztext/control.sock`, dir `0700`, socket `0600`, plus a
+  `SO_PEERCRED` uid check) and accepts one JSON object per line, so the desktop's
+  own shortcut manager — which *does* work on Wayland — can drive it. New
+  commands: `blitztext trigger [preset]`, `trigger --list`, `stop [--enter]`,
+  `cancel` and `status`. `trigger` is a toggle, like the hotkey it replaces.
+  Failure to bind is non-fatal and only logged. See
+  [docs/wayland-hotkeys.md](../docs/wayland-hotkeys.md).
+  (`control.py`, wired into `Daemon.start_input`/`stop_input`.)
+
 ## [2.03.54] - 2026-06-23
 
 ### Changed

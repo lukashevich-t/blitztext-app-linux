@@ -209,6 +209,11 @@ The first-run wizard guides you through the essentials in a few steps.
 ## Requirements
 
 - **Linux desktop with an X11 or Wayland session** (Wayland uses `wtype` or `ydotool`)
+
+  > On **Wayland the global hotkeys do not work** — they are captured via the X11
+  > `RECORD` extension, which a Wayland compositor feeds nothing into. Bind
+  > `blitztext trigger <preset>` to a shortcut in the desktop's own shortcut
+  > manager instead: [docs/wayland-hotkeys.md](docs/wayland-hotkeys.md).
 - **Python 3.11+** (for source installs)
 - **Host tools:**
 

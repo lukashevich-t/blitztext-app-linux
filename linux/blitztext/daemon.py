@@ -169,6 +169,7 @@ class Daemon:
         self._abort_event = threading.Event()
         self._prepared = False
         self._listener = None
+        self._control: typing.Any | None = None
         # Synthetic preset used by the voice-routing hotkey.
         self._route_workflow = Workflow(name="Voice", hotkey=cfg.routing_hotkey, mode="route")
 
@@ -290,6 +291,15 @@ class Daemon:
     @property
     def is_recording(self) -> bool:
         return self._recording is not None or self._streaming is not None
+
+    @property
+    def is_busy(self) -> bool:
+        return self._busy
+
+    def active_preset_name(self) -> str | None:
+        """Name of the preset the current session belongs to, if any."""
+        wf = self._active_workflow
+        return wf.name if wf is not None else None
 
     def _vad_start(self) -> None:
         self._vad_stop()
@@ -896,6 +906,10 @@ class Daemon:
 
     def start_input(self):
         """Start the configured input handler; returns its listener (joinable)."""
+        # The control socket is the desktop-independent way in (a Wayland
+        # session kills the pynput hotkeys, but the desktop's own shortcut
+        # manager still works and can call `blitztext trigger`).
+        self.start_control()
         if self.cfg.input_mode == "modifiers":
             from .inputmode import ModifierScheme
 
@@ -924,8 +938,24 @@ class Daemon:
             scheme.stop_listener()
             self._scheme = None
         self.stop_hotkeys()
+        self.stop_control()
         if self._wakeword_listener:
             self._wakeword_listener.stop()
+
+    # -- control socket -------------------------------------------------------
+    def start_control(self) -> None:
+        """Expose the local control socket (see control.py)."""
+        if self._control is not None:
+            return
+        from .control import ControlServer
+
+        self._control = ControlServer(self)
+        self._control.start()
+
+    def stop_control(self) -> None:
+        if self._control is not None:
+            self._control.stop()
+            self._control = None
 
     def stop_hotkeys(self) -> None:
         if self._listener is not None:

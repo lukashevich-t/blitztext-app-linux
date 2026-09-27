@@ -31,6 +31,46 @@ def _acquire_single_instance() -> bool:
     return True
 
 
+def _control_cmd(args) -> int:
+    """Drive the running daemon over its local control socket."""
+    from .control import ControlError, send
+
+    if args.cmd == "trigger" and args.list:
+        req = {"cmd": "list"}
+    elif args.cmd == "trigger":
+        req = {"cmd": "trigger", "preset": args.preset}
+    elif args.cmd == "stop":
+        req = {"cmd": "stop", "enter": bool(args.enter)}
+    elif args.cmd == "cancel":
+        req = {"cmd": "cancel"}
+    else:
+        req = {"cmd": "status"}
+
+    try:
+        res = send(req)
+    except ControlError as exc:
+        print(f"blitztext: {exc}", file=sys.stderr)
+        return 1
+
+    if args.cmd == "trigger" and args.list:
+        if not res.get("ok"):
+            print(f"blitztext: {res.get('error')}", file=sys.stderr)
+            return 1
+        print("Presets (use the name or the number):")
+        for i, name in enumerate(res.get("presets", []), 1):
+            print(f"  {i:>2}  {name}")
+        print(f"   -  {res.get('default')}   (voice routing; used when no preset is given)")
+        return 0
+
+    if not res.get("ok"):
+        print(f"blitztext: {res.get('error')}", file=sys.stderr)
+        return 1
+    if args.cmd == "status":
+        print(f"blitztext: {res.get('state')}"
+              + (f" ({res['preset']})" if res.get("preset") else ""))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="blitztext", description="Native dictation for Linux.")
     parser.add_argument("--version", action="version", version=f"blitztext {__version__}")
@@ -43,6 +83,16 @@ def main(argv: list[str] | None = None) -> int:
     p_tx = sub.add_parser("transcribe", help="Transcribe a WAV file and print the text (no hotkeys).")
     p_tx.add_argument("audio", type=Path)
 
+    p_tr = sub.add_parser("trigger", help="Start/stop dictation in the running instance. "
+                                          "Works on Wayland, where the global hotkeys do not.")
+    p_tr.add_argument("preset", nargs="?", default=None,
+                      help="preset name or 1-based index; omit for the voice-routing preset")
+    p_tr.add_argument("--list", action="store_true", help="list the available presets and exit")
+    p_st = sub.add_parser("stop", help="Stop recording and paste the transcript.")
+    p_st.add_argument("--enter", action="store_true", help="also press Enter after pasting")
+    sub.add_parser("cancel", help="Discard the current recording.")
+    sub.add_parser("status", help="Show what the running instance is doing.")
+
     args = parser.parse_args(argv)
     cmd = args.cmd or "tray"
 
@@ -52,6 +102,9 @@ def main(argv: list[str] | None = None) -> int:
     if cmd == "config-path":
         print(ensure_default(CONFIG_PATH))
         return 0
+
+    if cmd in ("trigger", "stop", "cancel", "status"):
+        return _control_cmd(args)
 
     # Only one live daemon/tray/gui at a time — prevents duplicate wakeword
     # listeners and recorders (which caused notification storms).

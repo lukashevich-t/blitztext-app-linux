@@ -94,6 +94,25 @@ All keys live in the `[input]` section.
 
 Click **Set** next to a key field and press the combination to rebind it.
 
+> **On Wayland these combinations do not fire.** Blitztext captures hotkeys
+> through the X11 `RECORD` extension, which a Wayland compositor feeds nothing
+> into. Bind `blitztext trigger <preset>` to a shortcut in the desktop's own
+> shortcut manager instead — see [docs/wayland-hotkeys.md](docs/wayland-hotkeys.md).
+
+### Triggering from the command line
+
+With an instance running, these act on it over a per-user unix socket — no
+keyboard hook involved, so they work on Wayland:
+
+| Command | Effect |
+|---|---|
+| `blitztext trigger <preset>` | Start dictation with that preset. Pressing it again stops and pastes (it is a toggle). |
+| `blitztext trigger` | Start dictation with voice routing (the spoken keyword picks the preset). |
+| `blitztext trigger --list` | Print the exact preset names and numbers to use. |
+| `blitztext stop [--enter]` | Stop recording and paste; `--enter` also presses Enter. |
+| `blitztext cancel` | Discard the current recording. |
+| `blitztext status` | Print `loading` / `ready` / `recording` / `busy`. |
+
 ### Quality gate
 
 Filters out clips that aren't real speech before they're transcribed. Keys live

@@ -154,6 +154,9 @@ access to every page. Click any image to open it full size.
 ## Requirements
 
 - **X11 session** (this uses `xdotool`; Wayland would need `ydotool`/`wtype`).
+  On Wayland the global hotkeys do not fire at all — see
+  [../docs/wayland-hotkeys.md](../docs/wayland-hotkeys.md) for the control-socket
+  workaround (`blitztext trigger <preset>` bound to a desktop shortcut).
 - Host tools: `xdotool`, `notify-send` (libnotify-bin), and a recorder
   (`pw-record` from pipewire, or `arecord`/`parecord`).
   ```bash
@@ -313,7 +316,19 @@ python -m blitztext gui                # control-panel window
 python -m blitztext run                # headless daemon, hotkeys only
 python -m blitztext transcribe f.wav   # one-shot, prints text (no hotkeys)
 python -m blitztext config-path        # print config location
+
+python -m blitztext trigger [preset]   # drive the running instance (works on Wayland)
+python -m blitztext trigger --list     # list preset names
+python -m blitztext stop [--enter]     # stop recording and paste
+python -m blitztext cancel             # discard the recording
+python -m blitztext status             # what the running instance is doing
 ```
+
+The `trigger`/`stop`/`cancel`/`status` commands talk to an already-running
+instance over a per-user unix socket
+(`$XDG_RUNTIME_DIR/blitztext/control.sock`) instead of listening for key
+presses, so they are the way to add hotkeys on a Wayland session. See
+[../docs/wayland-hotkeys.md](../docs/wayland-hotkeys.md).
 
 [faster-whisper]: https://github.com/SYSTRAN/faster-whisper
 

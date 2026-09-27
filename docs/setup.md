@@ -105,6 +105,20 @@ If text delivery does not work:
 - focus a normal text field before triggering a workflow
 - try `output = "paste"` or `output = "type"` in config
 
+### Wayland: hotkeys do not fire
+
+On a Wayland session the global hotkeys are **silently dead** — Blitztext logs
+`Ready` and registers them, but `pynput`'s X11 `RECORD` backend receives no key
+events from a Wayland compositor. The tray menu and wakeword still work.
+
+Bind a shortcut in the desktop's own shortcut manager to `blitztext trigger`, and
+set up an input injector for the text to come back:
+
+- capture: `blitztext trigger <preset>` over the local control socket
+- delivery: `ydotool` on GNOME (needs `ydotoold`); `wtype` only on wlr compositors
+
+See **[wayland-hotkeys.md](wayland-hotkeys.md)** for the full walkthrough.
+
 ## Troubleshooting
 
 - If the tray does not start, confirm `python3-gi` is visible to the venv. `install.sh` uses `--system-site-packages` for this reason.
